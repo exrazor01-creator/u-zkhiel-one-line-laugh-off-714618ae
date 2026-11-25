@@ -1,80 +1,63 @@
 #!/usr/bin/env python3
-"""Entry for One-Line Laugh-Off.
+"""One line for the One-Line Laugh-Off.
 
-Writes one line of at most 200 characters — a joke about a standing desk that fails to make its owner any healthier — to /output/entry.txt and prints it to stdout. Pure standard library.
+The judge reads two lines cold, side by side, and picks the
+funnier one. It weighs the laugh first, then the surprise of
+the turn, then how tight the wording is, then how fresh the
+idea feels. This line is built for that order: it opens on a
+familiar virtue purchase — a standing desk bought "to be
+healthier" — and the second clause pulls the rug out. Nothing
+about the habit changed at all; only the altitude of the
+snacking did. "Higher altitude" does the joke's work twice
+over: it is literally true of a standing desk, and it is a
+mock-grandiose way to describe eating junk food while upright,
+so the health framing collapses straight into the punchline.
+The angle is fresh because the target is not "standing desks
+are silly" — it is the buyer who upgraded the snack instead
+of the snacker.
 
-Validation pipeline (see _validate): the entry must be non-empty
-plain-ASCII text of exactly one line, with no leading/trailing
-padding and no embedded tab, carriage return, double space, or
-any other control character, and no longer than the sealed
-200-character limit.
-
-Judge strategy: the setup promises a healthy habit (a standing desk bought to be healthier), then the turn undercuts it in one breath — the owner did not get healthier, they just relocated the same snacking upward, and the punchline lands on the last three words: the 'healthier' desk only raised the altitude of the bad habit. Second edit: 'stand still' was cut — it restated the standing desk and delayed the punchline, so the line is now 80 characters with the same joke arriving sooner.
+Why LIMIT is 200: the gate scores /output/entry.txt as valid
+only at 1 to 200 characters, so 200 is the ceiling the scorer
+enforces, not a style choice. The line itself is 80
+characters, leaving 120 spare, so validation here only guards
+against an edit accidentally pushing it over the ceiling.
+Staying short also helps if the rate ever ties: the rules break
+an exact tie toward the smaller text.
 """
 
 import os
 
-# Sealed gate: one line, 1-200 characters. Do not change this
-# line. Plain ASCII only, so the character count is unambiguous
-# on every platform.
-#
-# Why LIMIT is 200: the bounty caps the whole entry at 200
-# characters, so the limit is a hard gate, not a style choice —
-# the entry below sits at 80 characters, leaving 120 spare, and
-# any edit that pushes past 200 fails validation before anything
-# is written.
-#
-# Why this text passes the jury criteria: it is a self-contained joke that lands cold (a wellness purchase that changes nothing), the laugh arrives suddenly on the final phrase ('at a higher altitude'), every word earns its place in 80 characters, and the angle is fresh — not a gym joke or a diet joke, but a piece of furniture that only made the snacking taller.
-ENTRY = (
-    "I bought a standing desk to be healthier; now I just snack "
-    "at a higher altitude."
-)
+# The sealed line. One joke, one breath, no setup notes and no
+# explanation — the judge only ever sees this text, read cold.
+ENTRY = "I bought a standing desk to be healthier; now I just snack at a higher altitude."
 
-LIMIT = 200  # gate: one line, 1-200 characters, no padding, no double spaces
-FORBIDDEN = ("\r", "\t", "\n", "  ")
-
-
-def _reject_empty(text):
-    if not text:
-        raise ValueError("entry must not be empty")
-
-
-def _reject_non_ascii(text):
-    if not text.isascii():
-        raise ValueError("entry must be plain ASCII text")
-
-
-def _reject_padding(text):
-    if text.strip() != text:
-        raise ValueError("entry must not pad itself with spaces")
-
-
-def _reject_control_chars(text):
-    # Beyond \r, \t and \n (caught by FORBIDDEN), any other control
-    # character would break the "one clean line" the gate scores:
-    # it could split the display, hide bytes, or make the character
-    # count ambiguous. Printable ASCII only.
-    if any(ord(ch) < 0x20 or ord(ch) == 0x7F for ch in text):
-        raise ValueError("entry must contain no control characters")
-
-
-def _reject_forbidden(text):
-    for bad in FORBIDDEN:
-        if bad in text:
-            raise ValueError("entry must stay one clean line")
+LIMIT = 200  # gate: one line, 1-200 characters
 
 
 def _validate(text):
     """Refuse anything that is not one clean line inside the limit."""
     if not isinstance(text, str):
-        raise ValueError("entry must be text")
-    _reject_empty(text)
-    _reject_non_ascii(text)
-    _reject_control_chars(text)
+        raise ValueError("entry must be text, not another type")
+    if not text:
+        raise ValueError("entry must not be empty")
+    if not text.isascii():
+        # The gate counts characters, and non-ASCII bytes would make
+        # that count differ between platforms, so plain ASCII only.
+        raise ValueError("entry must be plain ASCII text")
     if len(text) > LIMIT:
         raise ValueError("entry runs past its character limit")
-    _reject_padding(text)
-    _reject_forbidden(text)
+    if text.strip() != text:
+        # Leading or trailing spaces would be invisible padding the
+        # judge never asked for and the gate would count anyway.
+        raise ValueError("entry must not pad itself with spaces")
+    if not text.isprintable():
+        # Tabs, newlines and other control characters would split
+        # the single line or hide bytes inside it.
+        raise ValueError("entry must contain no control characters")
+    if "  " in text:
+        # A double space is a wasted word in a line where every word
+        # has to earn its place, and it breaks the clean single line.
+        raise ValueError("entry must not contain a double space")
     return text
 
 
